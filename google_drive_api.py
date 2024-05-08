@@ -1,5 +1,6 @@
 import io
 import os.path
+import pathlib
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -8,20 +9,15 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.readonly"]
-TOKEN_PATH = 'token.json'
-CREDENTIALS_PATH = 'credentials.json'
-PORT = 12345
-DRIVE_DIRECTORY = 'Samples'
-# DOWNLOADS_DIR = '/tmp/downloads'
-DOWNLOADS_DIR = './downloads'
-
 
 
 class GoogleDriveAPI:
-    def __init__(self):
-        self.service = self.get_service()
+    PORT = 12345
+    SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.readonly"]
+    TOKEN_PATH = 'token.json'
+
+    def __init__(self, credentials: pathlib.Path):
+        self.service = self.get_service(credentials)
 
     def get_folder_id(self, folder_name):
         results = (
@@ -57,43 +53,24 @@ class GoogleDriveAPI:
         return file.getvalue()
 
     @staticmethod
-    def get_creds():
+    def get_creds(credentials: pathlib.Path):
         creds = None
 
-        if os.path.exists(TOKEN_PATH):
-            creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+        if os.path.exists(GoogleDriveAPI.TOKEN_PATH):
+            creds = Credentials.from_authorized_user_file(GoogleDriveAPI.TOKEN_PATH, GoogleDriveAPI.SCOPES)
 
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_PATH, SCOPES)
-                creds = flow.run_local_server(port=PORT)
+                flow = InstalledAppFlow.from_client_secrets_file(credentials, GoogleDriveAPI.SCOPES)
+                creds = flow.run_local_server(port=self.PORT)
 
-            with open(TOKEN_PATH, "w") as token:
+            with open(GoogleDriveAPI.TOKEN_PATH, "w") as token:
                 token.write(creds.to_json())
         return creds
 
     @staticmethod
-    def get_service():
-        creds = GoogleDriveAPI.get_creds()
+    def get_service(credentials: pathlib.Path):
+        creds = GoogleDriveAPI.get_creds(credentials)
         return build(serviceName='drive', version='v3', credentials=creds)
-
-
-def main():
-    try:
-        api = GoogleDriveAPI()
-        folder_id = api.get_folder_id(DRIVE_DIRECTORY)
-        files_info = api.get_files_under_folder(folder_id)
-        for file_info in files_info:
-            file_data = api.download_file(file_info['id'])
-            file_name = DOWNLOADS_DIR + '/' + file_info['name']
-            with open(file_name, 'wb') as f:
-                f.write(file_data)
-
-    except HttpError as error:
-        print(f"An error occurred: {error}")
-
-
-if __name__ == "__main__":
-  main()
