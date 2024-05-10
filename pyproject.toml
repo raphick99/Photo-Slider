@@ -1,0 +1,18 @@
+[project]
+name = "PhotoSlider"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "Raphael Ickovics", email = "raphealickovics@gmail.com"},
+]
+dependencies = [
+    "google-api-python-client>=2.128.0",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.0",
+]
+requires-python = "==3.9.*"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
