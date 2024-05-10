@@ -10,20 +10,49 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 
 
-
 class GoogleDriveAPI:
     PORT = 12345
     SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.readonly"]
     TOKEN_PATH = 'token.json'
 
     def __init__(self, credentials: pathlib.Path):
-        self.service = self.get_service(credentials)
+        self.service = self._get_service(credentials)
 
-    def get_folder_id(self, folder_name):
+    def list_folder(self, folder_name):
+        folder_id = self._get_folder_id(folder_name)
+        files_info = self._get_files_under_folder(folder_id)
+        return [file_info['name'] for file_info in files_info]
+    
+    def download_folder(self, folder_name: str, destination_folder: pathlib.Path):
+        folder_id = self._get_folder_id(folder_name)
+        files_info = self._get_files_under_folder(folder_id)
+
+        for file_info in files_info:
+            file_data = self._download_raw_file(file_info['id'])
+            file_name = destination_folder / file_info['name']
+            with open(file_name, 'wb') as f:
+                f.write(file_data)
+    
+    def download_file(self, file_name: str, destination_path: pathlib.Path):
+        file_id = self._get_file_id(file_name)
+        file_data = self._download_raw_file(file_id)
+        destination_path.write_bytes(file_data)
+
+    def _get_file_id(self, file_name):
+        return self._get_id(name=file_name)
+
+    def _get_folder_id(self, folder_name):
+        return self._get_id(name=folder_name, mimeType='application/vnd.google-apps.folder')
+    
+    def _get_id(self, name: str, mimeType: str = None):
+        query = f'name = \'{name}\''
+        if mimeType:
+            query += f' and mimeType = \'{mimeType}\''
+
         results = (
             self.service.files()
             .list(
-                q=f'mimeType = \'application/vnd.google-apps.folder\' and name = \'{folder_name}\'',
+                q=query,
                 fields="files(id)",
             ).execute()
         ) 
@@ -32,7 +61,7 @@ class GoogleDriveAPI:
             raise RuntimeError(f'there should be a single file matcing, but there are {len(files)} matching instead')
         return files[0]['id']
 
-    def get_files_under_folder(self, folder_id):
+    def _get_files_under_folder(self, folder_id):
         results = (
             self.service.files()
             .list(
@@ -43,7 +72,7 @@ class GoogleDriveAPI:
         files = results.get('files', [])
         return files
 
-    def download_file(self, file_id):
+    def _download_raw_file(self, file_id):
         request = self.service.files().get_media(fileId=file_id)
         file = io.BytesIO()
         downloader = MediaIoBaseDownload(file, request)
@@ -53,7 +82,7 @@ class GoogleDriveAPI:
         return file.getvalue()
 
     @staticmethod
-    def get_creds(credentials: pathlib.Path):
+    def _get_creds(credentials: pathlib.Path):
         creds = None
 
         if os.path.exists(GoogleDriveAPI.TOKEN_PATH):
@@ -71,6 +100,6 @@ class GoogleDriveAPI:
         return creds
 
     @staticmethod
-    def get_service(credentials: pathlib.Path):
-        creds = GoogleDriveAPI.get_creds(credentials)
+    def _get_service(credentials: pathlib.Path):
+        creds = GoogleDriveAPI._get_creds(credentials)
         return build(serviceName='drive', version='v3', credentials=creds)
