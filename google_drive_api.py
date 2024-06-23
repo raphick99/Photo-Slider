@@ -93,7 +93,7 @@ class GoogleDriveAPI:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(credentials, GoogleDriveAPI.SCOPES)
-                creds = flow.run_local_server(port=self.PORT)
+                creds = flow.run_local_server(port=GoogleDriveAPI.PORT)
 
             with open(GoogleDriveAPI.TOKEN_PATH, "w") as token:
                 token.write(creds.to_json())
