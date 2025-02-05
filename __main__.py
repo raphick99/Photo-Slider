@@ -2,9 +2,7 @@ import os
 import time
 import shutil
 import pathlib
-import logging
 import threading
-import subprocess
 
 from google_drive_api import GoogleDriveAPI
 
@@ -13,10 +11,7 @@ logger = logging.getLogger(__name__)
 
 DRIVE_DIRECTORY = 'Samples'
 CREDENTIALS_PATH = pathlib.Path('credentials.json')
-# DOWNLOADS_DIR = pathlib.Path('/tmp/downloads')
-DOWNLOADS_DIR = pathlib.Path('./downloads')
 DOWNLOAD_INTERVAL = 60
-SLIDESHOW_DELAY = 1
 
 # So i now have the API, so i periodically download everything, then rerun
 
@@ -30,21 +25,6 @@ def download_photos():
         logger.info('downloaded again :)')
         logger.info(f'sleeping {DOWNLOAD_INTERVAL} seconds')
         time.sleep(DOWNLOAD_INTERVAL)
-
-
-def display_photos():
-    while True:
-        command = (
-            'feh '
-            '--auto-zoom '
-            '--fullscreen '
-            '--borderless '
-            '--hide-pointer '  # check that this works
-            f'--slideshow-delay={SLIDESHOW_DELAY} '
-            f'{DOWNLOADS_DIR}/*'
-        )
-        logger.info(f'executing: {command}')
-        subprocess.run(command, shell=True)
 
 
 def main():
@@ -61,4 +41,4 @@ def main():
 
 
 if __name__ == "__main__":
-  main()
+    main()
