@@ -11,6 +11,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from loguru import logger
 
 
+# TODO: make this async
 class GoogleDriveAPI:
     PORT = 12345
     SCOPES = ["https://www.googleapis.com/auth/drive.metadata.readonly", "https://www.googleapis.com/auth/drive.readonly"]
@@ -105,3 +106,4 @@ class GoogleDriveAPI:
     def _get_service(credentials: pathlib.Path) -> build:
         creds = GoogleDriveAPI._get_creds(credentials)
         return build(serviceName='drive', version='v3', credentials=creds)
+        return await loop.run_in_executor(None, request.execute)
