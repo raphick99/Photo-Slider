@@ -1,0 +1,44 @@
+# ruff.toml
+
+# Target your Python version
+target-version = "py311"
+
+# Set max line length
+line-length = 119
+
+# Enable rules from common rule sets
+lint.select = [
+    "E",    # pycodestyle (errors)
+    "F",    # pyflakes (unused imports, undefined names)
+    "I",    # isort (import sorting)
+    "N",    # pep8-naming
+    "UP",   # pyupgrade (syntax upgrades)
+    "B",    # bugbear (best practices)
+    "A",    # flake8-builtins
+    "C4",   # comprehensions (better list/dict/set comprehensions)
+    "S",    # bandit (security linter)
+    "SIM",  # flake8-simplify
+]
+
+# Rules to explicitly ignore
+lint.ignore = [
+    "E501", # line too long (handled by black if you use it)
+]
+
+# Allow autofix for these codes
+lint.fixable = ["ALL"]
+
+# Exclude certain paths
+exclude = [
+    ".git",
+    ".venv",
+    "build",
+    "dist",
+    "__pycache__",
+]
+
+[format]
+quote-style = "single"
+indent-style = "tab"
+skip-magic-trailing-comma = false
+line-ending = "lf"
