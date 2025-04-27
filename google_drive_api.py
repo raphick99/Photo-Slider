@@ -6,8 +6,9 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
+
+from loguru import logger
 
 
 class GoogleDriveAPI:
@@ -24,6 +25,7 @@ class GoogleDriveAPI:
         return [file_info['name'] for file_info in files_info]
     
     def download_folder(self, folder_name: str, destination_folder: pathlib.Path):
+        logger.info('downloading folder', folder_name=folder_name, destination_folder=destination_folder)
         folder_id = self._get_folder_id(folder_name)
         files_info = self._get_files_under_folder(folder_id)
 
@@ -93,13 +95,13 @@ class GoogleDriveAPI:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(credentials, GoogleDriveAPI.SCOPES)
-                creds = flow.run_local_server(port=self.PORT)
+                creds = flow.run_local_server(port=GoogleDriveAPI.PORT)
 
             with open(GoogleDriveAPI.TOKEN_PATH, "w") as token:
                 token.write(creds.to_json())
         return creds
 
     @staticmethod
-    def _get_service(credentials: pathlib.Path):
+    def _get_service(credentials: pathlib.Path) -> build:
         creds = GoogleDriveAPI._get_creds(credentials)
         return build(serviceName='drive', version='v3', credentials=creds)
