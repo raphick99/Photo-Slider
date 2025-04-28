@@ -5,23 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Photo Slider</title>
     <style>
-        * {
+        body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-        }
-        html, body {
-            width: 100%;
-            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
             overflow: hidden;
         }
-        body {
-            background-color: #000;
-        }
         #photo-container {
-            position: fixed;
-            top: 0;
-            left: 0;
+            position: relative;
             width: 100vw;
             height: 100vh;
             display: flex;
@@ -29,9 +24,9 @@
             align-items: center;
         }
         #photo-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
             opacity: 0;
             transition: opacity 0.5s ease-in-out;
         }
@@ -46,7 +41,6 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            z-index: 10;
         }
         .error {
             color: #ff4444;
@@ -58,20 +52,6 @@
             transform: translate(-50%, -50%);
             text-align: center;
             padding: 20px;
-            z-index: 10;
-        }
-        #debug-info {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: monospace;
-            font-size: 12px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-            z-index: 100;
         }
     </style>
 </head>
@@ -79,7 +59,6 @@
     <div id="photo-container">
         <div class="loading">Loading configuration...</div>
     </div>
-    <div id="debug-info"></div>
 
     <script>
         class PhotoSlider {
@@ -88,64 +67,31 @@
                 this.photoList = [];
                 this.currentIndex = 0;
                 this.container = document.getElementById('photo-container');
-                this.debugInfo = document.getElementById('debug-info');
                 this.displayTime = 5000; // Default display time in ms
                 this.refreshInterval = 10000; // Default refresh interval in ms
-                this.backendUrl = 'http://localhost:9000';
-            }
-
-            log(message) {
-                console.log(message);
-                this.debugInfo.textContent += message + '\n';
-                this.debugInfo.style.display = 'block';
             }
 
             async initialize() {
                 try {
-                    this.log('Starting initialization...');
-                    this.log(`Attempting to fetch configuration from ${this.backendUrl}/configuration`);
-                    
-                    // Test backend connection first
-                    try {
-                        const testResponse = await fetch(this.backendUrl);
-                        this.log('Backend server is reachable');
-                    } catch (error) {
-                        this.log('Error: Backend server is not reachable');
-                        this.log('Please make sure the backend server is running on port 9000');
-                        throw new Error('Backend server not reachable');
-                    }
-
                     // Fetch configuration
-                    const configResponse = await fetch(`${this.backendUrl}/configuration`);
-                    this.log('Configuration response received');
-                    
-                    if (!configResponse.ok) {
-                        this.log(`Error: Configuration request failed with status ${configResponse.status}`);
-                        throw new Error(`Configuration request failed: ${configResponse.status}`);
-                    }
-
+                    const configResponse = await fetch('http://localhost:9000/configuration');
                     this.config = await configResponse.json();
-                    this.log('Configuration loaded successfully:');
-                    this.log(JSON.stringify(this.config, null, 2));
-                    
-                    this.refreshInterval = this.config.refresh_interval * 1000;
-                    this.log(`Using refresh interval: ${this.refreshInterval}ms`);
+                    this.refreshInterval = this.config.refresh_interval * 1000; // Convert to milliseconds
                     
                     // Start the slider
                     await this.startSlider();
                 } catch (error) {
                     console.error('Error initializing slider:', error);
-                    this.showError(`Error loading configuration: ${error.message}`);
+                    this.showError('Error loading configuration');
                 }
             }
 
             async startSlider() {
                 while (true) {
                     try {
-                        this.log('Fetching photo list...');
-                        const response = await fetch(`${this.backendUrl}/photos`);
+                        // Fetch file list
+                        const response = await fetch('http://localhost:9000/photos');
                         this.photoList = await response.json();
-                        this.log(`Received ${this.photoList.length} photos`);
                         
                         if (this.photoList.length === 0) {
                             this.showError('No photos available');
@@ -153,13 +99,14 @@
                             continue;
                         }
 
+                        // Display each photo
                         for (let i = 0; i < this.photoList.length; i++) {
                             this.currentIndex = i;
-                            this.log(`Displaying photo ${i + 1}/${this.photoList.length}`);
                             await this.displayPhoto(this.photoList[i]);
                             await this.sleep(this.displayTime);
                         }
 
+                        // Refresh photos after displaying all
                         await this.refreshPhotos();
                     } catch (error) {
                         console.error('Error in slider loop:', error);
@@ -171,25 +118,24 @@
 
             async displayPhoto(photoId) {
                 try {
+                    // Show loading state
                     this.container.innerHTML = '<div class="loading">Loading photo...</div>';
-                    this.log(`Loading photo: ${photoId}`);
                     
+                    // Create and load the image
                     const img = document.createElement('img');
-                    img.src = `${this.backendUrl}/photos/${photoId}`;
+                    img.src = `http://localhost:9000/photos/${photoId}`;
                     
+                    // Wait for image to load
                     await new Promise((resolve, reject) => {
-                        img.onload = () => {
-                            this.log('Photo loaded successfully');
-                            resolve();
-                        };
-                        img.onerror = (error) => {
-                            this.log(`Error loading photo: ${error}`);
-                            reject(new Error('Failed to load photo'));
-                        };
+                        img.onload = resolve;
+                        img.onerror = reject;
                     });
 
+                    // Update container with the loaded image
                     this.container.innerHTML = '';
                     this.container.appendChild(img);
+                    
+                    // Add loaded class for fade-in effect
                     setTimeout(() => img.classList.add('loaded'), 50);
                 } catch (error) {
                     console.error('Error displaying photo:', error);
@@ -199,18 +145,14 @@
 
             async refreshPhotos() {
                 try {
-                    this.log('Refreshing photos...');
-                    await fetch(`${this.backendUrl}/photos/refresh`);
-                    this.log('Photos refreshed successfully');
+                    await fetch('http://localhost:9000/photos/refresh');
                 } catch (error) {
                     console.error('Error refreshing photos:', error);
-                    this.log('Error refreshing photos');
                 }
             }
 
             showError(message) {
                 this.container.innerHTML = `<div class="error">${message}</div>`;
-                this.log(`Error: ${message}`);
             }
 
             sleep(ms) {
