@@ -44,6 +44,11 @@ class GoogleDriveAPI:
 				f.write(file_data)
 
 	def download_file(self, file_name: str, destination_path: pathlib.Path):
+		logger.info(
+			'downloading file',
+			file_name=file_name,
+			destination_path=destination_path,
+		)
 		file_id = self._get_file_id(file_name)
 		file_data = self._download_raw_file(file_id)
 		destination_path.write_bytes(file_data)

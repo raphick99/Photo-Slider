@@ -1,8 +1,10 @@
-from contextlib import asynccontextmanager
 import pathlib
+from contextlib import asynccontextmanager
+
+import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-import uvicorn
+from loguru import logger
 
 from google_drive_api import GoogleDriveAPI
 from maintainer import Maintainer
@@ -16,10 +18,14 @@ CREDENTIALS_PATH = pathlib.Path('credentials.json')
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+	if not LOCAL_PHOTOS_PATH.exists():
+		LOCAL_PHOTOS_PATH.mkdir(parents=True)
 	global google_api
 	google_api = GoogleDriveAPI(CREDENTIALS_PATH)
-	maintainer = Maintainer(google_api)
+	maintainer = Maintainer(google_api, LOCAL_PHOTOS_PATH, DRIVE_PHOTOS_FOLDER)
+	logger.info('Starting maintainer')
 	maintainer.start()
+	logger.info('Maintainer started')
 	yield
 
 
@@ -33,6 +39,8 @@ async def get_photos() -> list[str]:
 
 @app.get('/photos/{photo_id}')
 async def get_photo(photo_id: str) -> FileResponse:
+	if not (LOCAL_PHOTOS_PATH / photo_id).exists():
+		google_api.download_file(photo_id, LOCAL_PHOTOS_PATH / photo_id)
 	return FileResponse(LOCAL_PHOTOS_PATH / photo_id)
 
 
@@ -44,7 +52,13 @@ async def refresh_photos():
 
 @app.get('/configuration')
 async def get_configuration() -> RuntimeConfig:
-	return RuntimeConfig(refresh_interval=10)
+	return RuntimeConfig(refresh_interval=60)
+
+
+@app.get('/photos-slide')
+async def photo_slide():
+    return FileResponse('frontend/photo_slide.html', media_type='text/html')
+
 
 
 if __name__ == '__main__':
