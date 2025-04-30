@@ -10,7 +10,7 @@ class Maintainer:
 			google_api: GoogleDriveAPI,
 			local_photos_path: pathlib.Path,
 			remote_photos_folder: str,
-			refresh_interval: float = 10,
+			refresh_interval: float = 300,  # 5 minutes
 	):
 		self.google_api = google_api
 		self.local_photos_path = local_photos_path

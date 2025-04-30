@@ -33,15 +33,6 @@
         #photo-container img.loaded {
             opacity: 1;
         }
-        .loading {
-            color: white;
-            font-size: 24px;
-            font-family: Arial, sans-serif;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
         .error {
             color: #ff4444;
             font-size: 24px;
@@ -56,9 +47,7 @@
     </style>
 </head>
 <body>
-    <div id="photo-container">
-        <div class="loading">Loading configuration...</div>
-    </div>
+    <div id="photo-container"></div>
 
     <script>
         class PhotoSlider {
@@ -67,8 +56,8 @@
                 this.photoList = [];
                 this.currentIndex = 0;
                 this.container = document.getElementById('photo-container');
-                this.displayTime = 5000; // Default display time in ms
-                this.refreshInterval = 10000; // Default refresh interval in ms
+                this.displayTime = 10000; // Default display time in ms
+                this.refreshInterval = 60000; // Default refresh interval in ms
             }
 
             async initialize() {
@@ -76,6 +65,7 @@
                     // Fetch configuration
                     const configResponse = await fetch('http://localhost:9000/configuration');
                     this.config = await configResponse.json();
+                    this.displayTime = this.config.display_time * 1000; // Convert to milliseconds
                     this.refreshInterval = this.config.refresh_interval * 1000; // Convert to milliseconds
                     
                     // Start the slider
@@ -118,9 +108,6 @@
 
             async displayPhoto(photoId) {
                 try {
-                    // Show loading state
-                    this.container.innerHTML = '<div class="loading">Loading photo...</div>';
-                    
                     // Create and load the image
                     const img = document.createElement('img');
                     img.src = `http://localhost:9000/photos/${photoId}`;
@@ -145,7 +132,7 @@
 
             async refreshPhotos() {
                 try {
-                    await fetch('http://localhost:9000/photos/refresh');
+                    await fetch('http://localhost:9000/photos/refresh', { method: 'POST' });
                 } catch (error) {
                     console.error('Error refreshing photos:', error);
                 }
