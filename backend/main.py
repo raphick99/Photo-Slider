@@ -44,7 +44,7 @@ async def get_photo(photo_id: str) -> FileResponse:
 	return FileResponse(LOCAL_PHOTOS_PATH / photo_id)
 
 
-@app.get('/photos/refresh')
+@app.post('/photos/refresh')
 async def refresh_photos():
 	google_api.download_folder(DRIVE_PHOTOS_FOLDER, LOCAL_PHOTOS_PATH)
 	return {'message': 'Photos refreshed'}
@@ -52,7 +52,7 @@ async def refresh_photos():
 
 @app.get('/configuration')
 async def get_configuration() -> RuntimeConfig:
-	return RuntimeConfig(refresh_interval=60)
+	return RuntimeConfig(display_time=10, refresh_interval=60)
 
 
 @app.get('/photos-slide')
@@ -60,6 +60,5 @@ async def photo_slide():
     return FileResponse('frontend/photo_slide.html', media_type='text/html')
 
 
-
 if __name__ == '__main__':
-	uvicorn.run('main:app', host='0.0.0.0', port=9000, reload=True)
+    uvicorn.run('main:app', host='0.0.0.0', port=9000, reload=True)
