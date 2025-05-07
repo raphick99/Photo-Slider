@@ -2,7 +2,7 @@ import pathlib
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 
@@ -16,43 +16,45 @@ DRIVE_PHOTOS_FOLDER = 'Samples'
 CREDENTIALS_PATH = pathlib.Path('credentials.json')
 
 
+maintainer: Maintainer | None = None
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-	if not LOCAL_PHOTOS_PATH.exists():
-		LOCAL_PHOTOS_PATH.mkdir(parents=True)
-	global google_api
-	google_api = GoogleDriveAPI(CREDENTIALS_PATH)
-	maintainer = Maintainer(google_api, LOCAL_PHOTOS_PATH, DRIVE_PHOTOS_FOLDER)
-	logger.info('Starting maintainer')
-	maintainer.start()
-	logger.info('Maintainer started')
-	yield
+    if not LOCAL_PHOTOS_PATH.exists():
+        LOCAL_PHOTOS_PATH.mkdir(parents=True)
+    global google_api, maintainer
+    google_api = GoogleDriveAPI(CREDENTIALS_PATH)
+    maintainer = Maintainer(google_api, LOCAL_PHOTOS_PATH, DRIVE_PHOTOS_FOLDER)
+    logger.info('Starting maintainer')
+    maintainer.start()
+    logger.info('Maintainer started')
+    yield
+    maintainer.stop()
+    logger.info('Maintainer stopped')
 
 
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get('/photos')
-async def get_photos() -> list[str]:
-	return google_api.list_folder(DRIVE_PHOTOS_FOLDER)
+class PhotoNotFoundError(Exception):
+    pass
 
 
-@app.get('/photos/{photo_id}')
-async def get_photo(photo_id: str) -> FileResponse:
-	if not (LOCAL_PHOTOS_PATH / photo_id).exists():
-		google_api.download_file(photo_id, LOCAL_PHOTOS_PATH / photo_id)
-	return FileResponse(LOCAL_PHOTOS_PATH / photo_id)
-
-
-@app.post('/photos/refresh')
-async def refresh_photos():
-	google_api.download_folder(DRIVE_PHOTOS_FOLDER, LOCAL_PHOTOS_PATH)
-	return {'message': 'Photos refreshed'}
+@app.get('/photos/next')
+async def get_next_photo_endpoint() -> FileResponse:
+    photo_path = maintainer.get_next_photo()
+    logger.info('Getting next photo', photo_id=photo_path)
+    if not photo_path:
+        raise HTTPException(status_code=404, detail='No photos available')
+    if not (photo_path).exists():
+        raise PhotoNotFoundError()
+    return FileResponse(photo_path)
 
 
 @app.get('/configuration')
 async def get_configuration() -> RuntimeConfig:
-	return RuntimeConfig(display_time=10, refresh_interval=60)
+    return RuntimeConfig(display_time=10)
 
 
 @app.get('/photos-slide')
@@ -61,4 +63,4 @@ async def photo_slide():
 
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', host='0.0.0.0', port=9000, reload=True)
+    uvicorn.run('main:app', host='localhost', port=9000, reload=True)
