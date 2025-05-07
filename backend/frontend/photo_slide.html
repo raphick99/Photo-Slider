@@ -44,6 +44,17 @@
             text-align: center;
             padding: 20px;
         }
+        .no-photos {
+            color: #ffffff;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>
@@ -53,11 +64,9 @@
         class PhotoSlider {
             constructor() {
                 this.config = null;
-                this.photoList = [];
-                this.currentIndex = 0;
                 this.container = document.getElementById('photo-container');
                 this.displayTime = 10000; // Default display time in ms
-                this.refreshInterval = 60000; // Default refresh interval in ms
+                this.retryDelay = 5000; // Delay before retrying when no photos are available
             }
 
             async initialize() {
@@ -66,7 +75,6 @@
                     const configResponse = await fetch('http://localhost:9000/configuration');
                     this.config = await configResponse.json();
                     this.displayTime = this.config.display_time * 1000; // Convert to milliseconds
-                    this.refreshInterval = this.config.refresh_interval * 1000; // Convert to milliseconds
                     
                     // Start the slider
                     await this.startSlider();
@@ -79,38 +87,31 @@
             async startSlider() {
                 while (true) {
                     try {
-                        // Fetch file list
-                        const response = await fetch('http://localhost:9000/photos');
-                        this.photoList = await response.json();
-                        
-                        if (this.photoList.length === 0) {
-                            this.showError('No photos available');
-                            await this.sleep(this.refreshInterval);
-                            continue;
-                        }
-
-                        // Display each photo
-                        for (let i = 0; i < this.photoList.length; i++) {
-                            this.currentIndex = i;
-                            await this.displayPhoto(this.photoList[i]);
-                            await this.sleep(this.displayTime);
-                        }
-
-                        // Refresh photos after displaying all
-                        await this.refreshPhotos();
+                        await this.displayNextPhoto();
+                        await this.sleep(this.displayTime);
                     } catch (error) {
-                        console.error('Error in slider loop:', error);
-                        this.showError('Error loading photos');
-                        await this.sleep(this.refreshInterval);
+                        if (error instanceof Response && error.status === 404) {
+                            this.showNoPhotos();
+                            await this.sleep(this.retryDelay);
+                        } else {
+                            console.error('Error in slider loop:', error);
+                            this.showError('Error loading photos');
+                            await this.sleep(this.retryDelay);
+                        }
                     }
                 }
             }
 
-            async displayPhoto(photoId) {
+            async displayNextPhoto() {
                 try {
+                    const response = await fetch('http://localhost:9000/photos/next');
+                    if (!response.ok) {
+                        throw response;
+                    }
+                    
                     // Create and load the image
                     const img = document.createElement('img');
-                    img.src = `http://localhost:9000/photos/${photoId}`;
+                    img.src = `http://localhost:9000/photos/next`;
                     
                     // Wait for image to load
                     await new Promise((resolve, reject) => {
@@ -126,20 +127,16 @@
                     setTimeout(() => img.classList.add('loaded'), 50);
                 } catch (error) {
                     console.error('Error displaying photo:', error);
-                    this.showError('Error loading photo');
-                }
-            }
-
-            async refreshPhotos() {
-                try {
-                    await fetch('http://localhost:9000/photos/refresh', { method: 'POST' });
-                } catch (error) {
-                    console.error('Error refreshing photos:', error);
+                    throw error; // Propagate error to be handled by startSlider
                 }
             }
 
             showError(message) {
                 this.container.innerHTML = `<div class="error">${message}</div>`;
+            }
+
+            showNoPhotos() {
+                this.container.innerHTML = `<div class="no-photos">No photos available. Retrying in ${this.retryDelay/1000} seconds...</div>`;
             }
 
             sleep(ms) {
