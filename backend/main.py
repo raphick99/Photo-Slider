@@ -1,3 +1,4 @@
+import argparse
 import pathlib
 from contextlib import asynccontextmanager
 
@@ -62,5 +63,14 @@ async def photo_slide():
     return FileResponse('frontend/photo_slide.html', media_type='text/html')
 
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Run the FastAPI server.')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    uvicorn.run('main:app', host='localhost', port=9000, reload=True)
+    args = parse_args()
+    host = '0.0.0.0' if not args.debug else 'localhost'
+    uvicorn.run('main:app', host=host, port=9000, reload=args.debug)

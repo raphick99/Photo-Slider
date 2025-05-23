@@ -72,7 +72,7 @@
             async initialize() {
                 try {
                     // Fetch configuration
-                    const configResponse = await fetch('http://localhost:9000/configuration');
+                    const configResponse = await fetch('/configuration');
                     this.config = await configResponse.json();
                     this.displayTime = this.config.display_time * 1000; // Convert to milliseconds
                     
@@ -104,14 +104,14 @@
 
             async displayNextPhoto() {
                 try {
-                    const response = await fetch('http://localhost:9000/photos/next');
+                    const response = await fetch('/photos/next');
                     if (!response.ok) {
                         throw response;
                     }
                     
                     // Create and load the image
                     const img = document.createElement('img');
-                    img.src = `http://localhost:9000/photos/next`;
+                    img.src = '/photos/next';
                     
                     // Wait for image to load
                     await new Promise((resolve, reject) => {
