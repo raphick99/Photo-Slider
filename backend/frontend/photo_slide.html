@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Slider</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
+            overflow: hidden;
+        }
+        #photo-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #photo-container img {
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        #photo-container img.loaded {
+            opacity: 1;
+        }
+        .error {
+            color: #ff4444;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 20px;
+        }
+        .no-photos {
+            color: #ffffff;
+            font-size: 24px;
+            font-family: Arial, sans-serif;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="photo-container"></div>
+
+    <script>
+        class PhotoSlider {
+            constructor() {
+                this.config = null;
+                this.container = document.getElementById('photo-container');
+                this.displayTime = 10000; // Default display time in ms
+                this.retryDelay = 5000; // Delay before retrying when no photos are available
+            }
+
+            async initialize() {
+                try {
+                    // Fetch configuration
+                    const configResponse = await fetch('/configuration');
+                    this.config = await configResponse.json();
+                    this.displayTime = this.config.display_time * 1000; // Convert to milliseconds
+                    
+                    // Start the slider
+                    await this.startSlider();
+                } catch (error) {
+                    console.error('Error initializing slider:', error);
+                    this.showError('Error loading configuration');
+                }
+            }
+
+            async startSlider() {
+                while (true) {
+                    try {
+                        await this.displayNextPhoto();
+                        await this.sleep(this.displayTime);
+                    } catch (error) {
+                        if (error instanceof Response && error.status === 404) {
+                            this.showNoPhotos();
+                            await this.sleep(this.retryDelay);
+                        } else {
+                            console.error('Error in slider loop:', error);
+                            this.showError('Error loading photos');
+                            await this.sleep(this.retryDelay);
+                        }
+                    }
+                }
+            }
+
+            async displayNextPhoto() {
+                try {
+                    const response = await fetch('/photos/next');
+                    if (!response.ok) {
+                        throw response;
+                    }
+                    
+                    // Create and load the image
+                    const img = document.createElement('img');
+                    img.src = '/photos/next';
+                    
+                    // Wait for image to load
+                    await new Promise((resolve, reject) => {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    });
+
+                    // Update container with the loaded image
+                    this.container.innerHTML = '';
+                    this.container.appendChild(img);
+                    
+                    // Add loaded class for fade-in effect
+                    setTimeout(() => img.classList.add('loaded'), 50);
+                } catch (error) {
+                    console.error('Error displaying photo:', error);
+                    throw error; // Propagate error to be handled by startSlider
+                }
+            }
+
+            showError(message) {
+                this.container.innerHTML = `<div class="error">${message}</div>`;
+            }
+
+            showNoPhotos() {
+                this.container.innerHTML = `<div class="no-photos">No photos available. Retrying in ${this.retryDelay/1000} seconds...</div>`;
+            }
+
+            sleep(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+        }
+
+        // Initialize the slider when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const slider = new PhotoSlider();
+            slider.initialize();
+        });
+    </script>
+</body>
+</html>
