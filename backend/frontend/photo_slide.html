@@ -108,10 +108,12 @@
                     if (!response.ok) {
                         throw response;
                     }
+                    const photoResponse = await response.json();
+                    const photoUrl = photoResponse.photo_url;
                     
                     // Create and load the image
                     const img = document.createElement('img');
-                    img.src = '/photos/next';
+                    img.src = photoUrl;
                     
                     // Wait for image to load
                     await new Promise((resolve, reject) => {
