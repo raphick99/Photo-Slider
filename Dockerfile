@@ -1,20 +1,21 @@
 # Use Python 3.12 as the base image
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Install PDM
 RUN pip install -U pdm
 
-# Copy PDM files
 COPY pyproject.toml pdm.lock ./
 
-# Install dependencies
-RUN pdm install
+RUN pdm install --no-editable
 
-# Copy source code
-COPY src/ ./src/
+FROM python:3.12-slim
 
-# Run the application
-CMD ["pdm", "run", "python", "src/main.py"]
+COPY --from=builder /app/.venv/ /app/.venv
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+COPY src/ /app/src/
+
+CMD ["python", "/app/src/main.py"]

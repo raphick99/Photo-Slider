@@ -1,19 +1,21 @@
 services:
   app:
     image: machines/filestash:latest
-    restart: always
     environment:
-    - APPLICATION_URL=
-    - CANARY=true
+      - APPLICATION_URL=
+      - CANARY=true
     ports:
-    - "8334:8334"
+      - "8334:8334"
     volumes:
-    - filestash:/app/data/state/
+      - filestash:/app/data/state/
 
   photo-slider:
     image: photo-slider:latest
+    build:
+      context: .
     ports:
     - "9000:9000"
 
 volumes:
-    filestash: {}
+  filestash:
+    name: photo-slider-filestash
