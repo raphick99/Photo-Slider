@@ -19,6 +19,7 @@ class Maintainer:
             file_list = [key async for key in self.s3_api.list_files()]
             if not file_list:
                 return None
-            self.file_list = random.shuffle(file_list)
+            random.shuffle(file_list)
+            self.file_list = file_list
         current_photo_key = self.file_list.pop(0)
         return await self.s3_api.get_presigned_url(current_photo_key)

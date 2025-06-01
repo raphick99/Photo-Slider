@@ -3,10 +3,11 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from loguru import logger
 
 from maintainer import Maintainer
-from models import RuntimeConfig
+from models import PhotoResponse, RuntimeConfig
 
 maintainer: Maintainer | None = None
 
@@ -14,7 +15,7 @@ maintainer: Maintainer | None = None
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global maintainer
-    maintainer = Maintainer()
+    maintainer = Maintainer(bucket_name='ickovics-home')
     logger.info('Starting maintainer')
     maintainer.start()
     yield
@@ -26,23 +27,22 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.get('/photos/next')
-async def get_next_photo_endpoint() -> FileResponse:
-    photo_url = maintainer.get_next_photo()
+async def get_next_photo_endpoint() -> PhotoResponse:
+    photo_url = await maintainer.get_next_photo()
     logger.info('Getting next photo', photo_id=photo_url)
     if not photo_url:
         raise HTTPException(status_code=404, detail='No photos available')
-    return FileResponse(photo_url)
+    return PhotoResponse(photo_url=photo_url)
 
 
 @app.get('/configuration')
 async def get_configuration() -> RuntimeConfig:
-    return RuntimeConfig(display_time=10)
+    return RuntimeConfig(display_time=1)
 
 
 @app.get('/photos-slide')
 async def photo_slide():
     return FileResponse('frontend/photo_slide.html', media_type='text/html')
-
 
 
 def parse_args():

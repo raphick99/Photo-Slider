@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import aioboto3
 from botocore.config import Config
@@ -10,7 +10,7 @@ class S3Api:
 
     async def list_files(self) -> AsyncGenerator[str, None]:
         session = aioboto3.Session()
-        async with session.resource("s3") as s3:
+        async with session.resource('s3') as s3:
             bucket = await s3.Bucket(self.bucket_name)
             async for s3_object in bucket.objects.all():
                 yield s3_object.key
@@ -18,7 +18,7 @@ class S3Api:
     async def get_presigned_url(self, key: str, expires_in: int = 60) -> str:
         session = aioboto3.Session()
         config = Config(signature_version='s3v4')
-        async with session.client("s3", config=config) as s3:
+        async with session.client('s3', config=config) as s3:
             url = await s3.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': self.bucket_name, 'Key': key},
