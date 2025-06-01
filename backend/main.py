@@ -42,7 +42,7 @@ async def get_configuration() -> RuntimeConfig:
 
 @app.get('/photos-slide')
 async def photo_slide():
-    return FileResponse('frontend/photo_slide.html', media_type='text/html')
+    return FileResponse('www/photo_slide.html', media_type='text/html')
 
 
 def parse_args():
