@@ -1,48 +1,25 @@
-import asyncio
-import pathlib
+import random
 
-from google_drive_api import GoogleDriveAPI
+from s3_api import S3Api
 
 
 class Maintainer:
-    def __init__(
-        self,
-        google_api: GoogleDriveAPI,
-        local_photos_path: pathlib.Path,
-        remote_photos_folder: str,
-        refresh_interval: float = 300,  # 5 minutes
-    ):
-        self.google_api = google_api
-        self.local_photos_path = local_photos_path
-        self.remote_photos_folder = remote_photos_folder
-        self.refresh_interval = refresh_interval
-        self.refresh_task: asyncio.Task | None = None
+    def __init__(self, bucket_name: str):
+        self.s3_api = S3Api(bucket_name)
         self.file_list: list[str] = []
-        self.current_photo_index: int = 0
 
     def start(self):
-        self.refresh_task = asyncio.create_task(self.periodic_photos_refresh())
+        pass
 
     def stop(self):
-        if self.refresh_task:
-            self.refresh_task.cancel()
-            self.refresh_task = None
+        pass
 
-    def get_next_photo(self) -> str | None:
+    async def get_next_photo(self) -> str | None:
         if not self.file_list:
-            return None
-        self.current_photo_index = (self.current_photo_index + 1) % len(self.file_list)
-        return self.file_list[self.current_photo_index]
-
-    async def periodic_photos_refresh(self):
-        try:
-            while True:
-                downloaded_files = self.google_api.download_folder(self.remote_photos_folder, self.local_photos_path)
-                downloaded_files.sort()
-
-                if self.file_list != downloaded_files:
-                    self.file_list = downloaded_files
-                    self.current_photo_index = 0
-                await asyncio.sleep(self.refresh_interval)
-        except asyncio.CancelledError:
-            pass
+            file_list = [key async for key in self.s3_api.list_files()]
+            if not file_list:
+                return None
+            random.shuffle(file_list)
+            self.file_list = file_list
+        current_photo_key = self.file_list.pop(0)
+        return await self.s3_api.get_presigned_url(current_photo_key)
