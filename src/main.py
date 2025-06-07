@@ -1,4 +1,5 @@
 import argparse
+import pathlib
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -40,9 +41,11 @@ async def get_configuration() -> RuntimeConfig:
     return RuntimeConfig(display_time=1)
 
 
-@app.get('/photos-slide')
-async def photo_slide():
-    return FileResponse('frontend/photo_slide.html', media_type='text/html')
+@app.get('/')
+async def start_photo_slide():
+    current_dir = pathlib.Path(__file__).parent
+    file_path = current_dir / 'www/index.html'
+    return FileResponse(file_path, media_type='text/html')
 
 
 def parse_args():
