@@ -7,21 +7,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 
-from maintainer import Maintainer
 from models import PhotoResponse, RuntimeConfig
+from photo_scheduler import PhotoScheduler
 
-maintainer: Maintainer | None = None
+scheduler: PhotoScheduler | None = None
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global maintainer
-    maintainer = Maintainer(bucket_name='ickovics-home')
-    logger.info('Starting maintainer')
-    maintainer.start()
+    global scheduler
+    scheduler = PhotoScheduler(bucket_name='ickovics-home')
     yield
-    maintainer.stop()
-    logger.info('Maintainer stopped')
 
 
 app = FastAPI(lifespan=lifespan)
@@ -29,7 +25,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get('/photos/next')
 async def get_next_photo_endpoint() -> PhotoResponse:
-    photo_url = await maintainer.get_next_photo()
+    photo_url = await scheduler.get_next_photo()
     logger.info('Getting next photo', photo_id=photo_url)
     if not photo_url:
         raise HTTPException(status_code=404, detail='No photos available')

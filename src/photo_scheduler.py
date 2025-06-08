@@ -3,16 +3,10 @@ import random
 from s3_api import S3Api
 
 
-class Maintainer:
+class PhotoScheduler:
     def __init__(self, bucket_name: str):
         self.s3_api = S3Api(bucket_name)
         self.file_list: list[str] = []
-
-    def start(self):
-        pass
-
-    def stop(self):
-        pass
 
     async def get_next_photo(self) -> str | None:
         if not self.file_list:
