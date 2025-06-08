@@ -1,4 +1,4 @@
-.PHONY: build format push up down
+.PHONY: build lint push up down
 
 # Variables
 IMAGE_NAME = photo-slider
@@ -12,7 +12,7 @@ SSH_COMMAND = ssh -i $(PEM_FILE) $(USER)@$(HOST)
 build:
 	docker build --platform $(PLATFORM) -t $(IMAGE_NAME) .
 
-format:
+lint:
 	pdm run ruff format
 	pdm run ruff check --fix
 

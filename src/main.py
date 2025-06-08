@@ -7,21 +7,21 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 
-from maintainer import Maintainer
+import config
 from models import PhotoResponse, RuntimeConfig
+from photo_scheduler import PhotoScheduler
+from setup_logging import setup_logging
 
-maintainer: Maintainer | None = None
+scheduler: PhotoScheduler | None = None
+
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    global maintainer
-    maintainer = Maintainer(bucket_name='ickovics-home')
-    logger.info('Starting maintainer')
-    maintainer.start()
+    setup_logging()
+    global scheduler
+    scheduler = PhotoScheduler(bucket_name=config.BUCKET_NAME, fetch_interval=config.FETCH_INTERVAL)
     yield
-    maintainer.stop()
-    logger.info('Maintainer stopped')
 
 
 app = FastAPI(lifespan=lifespan)
@@ -29,8 +29,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.get('/photos/next')
 async def get_next_photo_endpoint() -> PhotoResponse:
-    photo_url = await maintainer.get_next_photo()
-    logger.info('Getting next photo', photo_id=photo_url)
+    photo_url = await scheduler.get_next_photo()
     if not photo_url:
         raise HTTPException(status_code=404, detail='No photos available')
     return PhotoResponse(photo_url=photo_url)
@@ -38,7 +37,7 @@ async def get_next_photo_endpoint() -> PhotoResponse:
 
 @app.get('/configuration')
 async def get_configuration() -> RuntimeConfig:
-    return RuntimeConfig(display_time=1)
+    return RuntimeConfig(display_time=config.DISPLAY_TIME)
 
 
 @app.get('/')
@@ -56,5 +55,5 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    host = '0.0.0.0' if not args.debug else 'localhost'
+    host = '0.0.0.0' if not args.debug else 'localhost'  # noqa: S104
     uvicorn.run('main:app', host=host, port=9000, reload=args.debug)
