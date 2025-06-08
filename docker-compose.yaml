@@ -16,6 +16,9 @@ services:
     environment:
       - AWS_REGION=eu-north-1
       - AWS_DEFAULT_REGION=eu-north-1
+      - BUCKET_NAME=ickovics-home
+      - FETCH_INTERVAL=30
+      - DISPLAY_TIME=1
     build:
       context: .
     ports:

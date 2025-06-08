@@ -7,16 +7,18 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from loguru import logger
 
+import config
 from models import PhotoResponse, RuntimeConfig
 from photo_scheduler import PhotoScheduler
 
 scheduler: PhotoScheduler | None = None
 
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     global scheduler
-    scheduler = PhotoScheduler(bucket_name='ickovics-home')
+    scheduler = PhotoScheduler(bucket_name=config.BUCKET_NAME, fetch_interval=config.FETCH_INTERVAL)
     yield
 
 
@@ -34,7 +36,7 @@ async def get_next_photo_endpoint() -> PhotoResponse:
 
 @app.get('/configuration')
 async def get_configuration() -> RuntimeConfig:
-    return RuntimeConfig(display_time=1)
+    return RuntimeConfig(display_time=config.DISPLAY_TIME)
 
 
 @app.get('/')

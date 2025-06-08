@@ -25,3 +25,12 @@ class S3Api:
                 ExpiresIn=expires_in,
             )
             return url
+
+    async def exists(self, key: str) -> bool:
+        session = aioboto3.Session()
+        async with session.client('s3') as s3:
+            try:
+                await s3.head_object(Bucket=self.bucket_name, Key=key)
+                return True
+            except Exception:
+                return False
