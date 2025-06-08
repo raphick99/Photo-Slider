@@ -10,6 +10,7 @@ from loguru import logger
 import config
 from models import PhotoResponse, RuntimeConfig
 from photo_scheduler import PhotoScheduler
+from setup_logging import setup_logging
 
 scheduler: PhotoScheduler | None = None
 
@@ -17,6 +18,7 @@ scheduler: PhotoScheduler | None = None
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    setup_logging()
     global scheduler
     scheduler = PhotoScheduler(bucket_name=config.BUCKET_NAME, fetch_interval=config.FETCH_INTERVAL)
     yield
@@ -28,7 +30,6 @@ app = FastAPI(lifespan=lifespan)
 @app.get('/photos/next')
 async def get_next_photo_endpoint() -> PhotoResponse:
     photo_url = await scheduler.get_next_photo()
-    logger.info('Getting next photo', photo_id=photo_url)
     if not photo_url:
         raise HTTPException(status_code=404, detail='No photos available')
     return PhotoResponse(photo_url=photo_url)
