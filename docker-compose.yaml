@@ -1,0 +1,25 @@
+services:
+  filestash:
+    image: machines/filestash:latest
+    environment:
+      - APPLICATION_URL=ec2-16-170-253-227.eu-north-1.compute.amazonaws.com:8334
+      - CANARY=false
+      - AWS_REGION=eu-north-1
+      - AWS_DEFAULT_REGION=eu-north-1
+    ports:
+      - "8334:8334"
+    volumes:
+      - filestash:/app/data/state/
+
+  app:
+    image: photo-slider:latest
+    environment:
+      - AWS_REGION=eu-north-1
+      - AWS_DEFAULT_REGION=eu-north-1
+    build:
+      context: .
+    ports:
+    - "9000:9000"
+
+volumes:
+  filestash: {}
