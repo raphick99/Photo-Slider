@@ -20,7 +20,7 @@ push:
 	# Create remote directory
 	$(SSH_COMMAND) "mkdir -p $(REMOTE_DIR)"
 	# Copy necessary files excluding hidden files
-	rsync -av --exclude='.*' -e "ssh -i $(PEM_FILE)" Dockerfile docker-compose.yaml pyproject.toml pdm.lock src $(USER)@$(HOST):$(REMOTE_DIR)
+	rsync -av --exclude='.*' -e "ssh -i $(PEM_FILE)" Dockerfile nginx.conf docker-compose.yaml pyproject.toml pdm.lock src $(USER)@$(HOST):$(REMOTE_DIR)
 	# Build on remote machine
 	$(SSH_COMMAND) "cd $(REMOTE_DIR) && docker build -t $(IMAGE_NAME) ."
 

@@ -12,7 +12,7 @@ class PhotoScheduler:
         self.fetch_interval = fetch_interval
         self.photo_queue = queue.PriorityQueue()
         self.photos_in_queue = set()
-        self.current_age = 0
+        self.current_age = 1
         self.last_fetch_time = 0
 
     async def _fetch_new_photos(self):
