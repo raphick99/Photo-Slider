@@ -1,6 +1,6 @@
 services:
   filestash:
-    image: machines/filestash:latest
+    image: machines/filestash:latest-arm64v8
     environment:
       - APPLICATION_URL=upload.loopslide.xyz
       - CANARY=false
@@ -25,7 +25,7 @@ services:
     - "8080:8080"
 
   nginx:
-    image: nginx:latest
+    image: arm64v8/nginx:latest
     ports:
       - "80:80"
     volumes:

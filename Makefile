@@ -1,16 +1,12 @@
-.PHONY: build lint push up down
+.PHONY: lint push up down
 
 # Variables
 IMAGE_NAME = photo-slider
-PLATFORM = linux/amd64
 USER = ec2-user
-HOST = ec2-16-170-253-227.eu-north-1.compute.amazonaws.com
+HOST = loopslide.xyz
 REMOTE_DIR = /home/$(USER)/photo-slider
 PEM_FILE = ~/Downloads/PhotoSlider.pem
 SSH_COMMAND = ssh -i $(PEM_FILE) $(USER)@$(HOST)
-
-build:
-	docker build --platform $(PLATFORM) -t $(IMAGE_NAME) .
 
 lint:
 	pdm run ruff format

@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from loguru import logger
 
 import config
 from models import PhotoResponse, RuntimeConfig
@@ -13,7 +12,6 @@ from photo_scheduler import PhotoScheduler
 from setup_logging import setup_logging
 
 scheduler: PhotoScheduler | None = None
-
 
 
 @asynccontextmanager
