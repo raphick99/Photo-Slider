@@ -5,7 +5,6 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
-from loguru import logger
 
 import config
 from models import PhotoResponse, RuntimeConfig
@@ -13,7 +12,6 @@ from photo_scheduler import PhotoScheduler
 from setup_logging import setup_logging
 
 scheduler: PhotoScheduler | None = None
-
 
 
 @asynccontextmanager
@@ -56,4 +54,4 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     host = '0.0.0.0' if not args.debug else 'localhost'  # noqa: S104
-    uvicorn.run('main:app', host=host, port=9000, reload=args.debug)
+    uvicorn.run('main:app', host=host, port=8080, reload=args.debug)

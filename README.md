@@ -1,8 +1,5 @@
 # Photo-Slider
 
-## Installation
-To install the Photo-Slider project, you need to have [PDM](https://pdm.fming.dev/) installed on your system. PDM is a modern Python package and dependency manager.
-
 ### Prerequisites
 
 - Python 3.12 is required as specified in the `pyproject.toml`.
@@ -13,6 +10,7 @@ To install the Photo-Slider project, you need to have [PDM](https://pdm.fming.de
   ```
 - Docker and Docker compose:
   ```bash
+  sudo yum update
   sudo yum install docker -y
   sudo service docker start
   sudo usermod -a -G docker ec2-user
@@ -24,35 +22,39 @@ To install the Photo-Slider project, you need to have [PDM](https://pdm.fming.de
   docker-compose version
   ```
 
-- Filestash installation
-  ```bash
-  mkdir filestash && cd filestash
-  curl -O https://downloads.filestash.app/latest/docker-compose.yml
-  docker-compose up -d
-  ```
-
-### Installation Steps
-
-1. Clone the repository:
+## Installation Steps
+### Push and run
 
    ```bash
-   git clone <repository-url>
-   cd Photo-Slider
+   make push
+   make up
    ```
 
-2. Install the dependencies using PDM:
+### Stopping
 
    ```bash
-   pdm install
+   make down
    ```
 
-This will install all the dependencies specified in the `pyproject.toml` and `pdm.lock` files.
+### Generating SSL Certificates with Certbot
 
+To secure your application with SSL, you can generate certificates using Certbot. Follow these steps to generate certificates for your domain:
 
-## Design
-This will be built of 2 components:
-1. WebApp - is in charge of displaying the photos in a photo slide format
-2. Backend - The backend is in charge of retrieving the photos from google drive and supplying them to the webap
+1. **Install Certbot**: If Certbot is not already installed on your system, you can install it using your package manager. For example, on Ubuntu, you can run:
 
-Features:
-1. 
+   ```bash
+   sudo yum update
+   sudo yum install certbot
+   ```
+
+2. **Generate Certificates**: Use Certbot to generate certificates for your domain. Replace `loopslide.xyz` and `*.loopslide.xyz` with your actual domain names:
+
+   ```bash
+   sudo certbot certonly --manual --preferred-challenges dns -d loopslide.xyz -d *.loopslide.xyz
+   ```
+
+   - This command will guide you through the process of creating DNS TXT records for domain validation. Follow the instructions provided by Certbot to complete the process.
+
+3. **Renewal**: Certbot certificates are valid for 90 days. To renew re-run the previous steps
+
+By following these steps, you will have SSL certificates generated for your domain, ensuring secure communication for your application.
