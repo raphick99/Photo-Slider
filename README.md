@@ -4,7 +4,6 @@
 
 - Python 3.12 is required as specified in the `pyproject.toml`.
 - Ensure you have PDM installed. If not, you can install it via pip:
-
   ```bash
   curl -sSL https://pdm-project.org/install-pdm.py | python3 -
   ```
@@ -20,6 +19,18 @@
   sudo curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
   sudo chmod +x /usr/local/bin/docker-compose
   docker-compose version
+  ```
+- rclone and fuse3
+  ```bash
+  sudo yum install fuse3
+
+  sudo -v ; curl https://rclone.org/install.sh | sudo bash
+  rclone version
+  rclone config  # At this stage configure the s3 bucket..
+
+  mkdir -p ~/mnt/srv
+  # Make sure user_allow_other is enabled in /etc/fuse.conf
+  rclone mount s3:/ ~/mnt/srv/ --allow-other --vfs-cache-mode writes --daemon
   ```
 
 ## Installation Steps
