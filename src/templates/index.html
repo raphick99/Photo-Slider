@@ -59,6 +59,9 @@
             padding: 20px;
         }
     </style>
+    <script>
+        window.TENANT_ID = "{{ tenant_id }}";
+    </script>
 </head>
 <body>
     <div id="photo-container"></div>
@@ -70,12 +73,17 @@
                 this.container = document.getElementById('photo-container');
                 this.displayTime = 10000; // Default display time in ms
                 this.retryDelay = 5000; // Delay before retrying when no photos are available
+                this.tenantId = window.TENANT_ID; // Get tenant ID from template variable
             }
 
             async initialize() {
                 try {
                     // Fetch configuration
-                    const configResponse = await fetch('/configuration');
+                    const configResponse = await fetch('/configuration', {
+                        headers: {
+                            'X-TENANT-ID': this.tenantId
+                        }
+                    });
                     this.config = await configResponse.json();
                     this.displayTime = this.config.display_time * 1000; // Convert to milliseconds
                     
@@ -107,12 +115,18 @@
 
             async displayNextPhoto() {
                 try {
-                    const response = await fetch('/photos/next');
+                    const response = await fetch('/photos/next', {
+                        headers: {
+                            'X-TENANT-ID': this.tenantId
+                        }
+                    });
                     if (!response.ok) {
                         throw response;
                     }
                     const photoResponse = await response.json();
                     const photoUrl = photoResponse.photo_url;
+                    
+                    console.log('Loading photo:', photoUrl);
                     
                     // Create and load the image
                     const img = document.createElement('img');
@@ -120,8 +134,33 @@
                     
                     // Wait for image to load
                     await new Promise((resolve, reject) => {
-                        img.onload = resolve;
-                        img.onerror = reject;
+                        img.onload = () => {
+                            console.log('Photo loaded successfully:', photoUrl);
+                            resolve();
+                        };
+                        img.onerror = (event) => {
+                            const error = new Error(`Failed to load image: ${photoUrl}`);
+                            error.photoUrl = photoUrl;
+                            error.originalEvent = event;
+                            console.error('Image loading failed:', {
+                                url: photoUrl,
+                                error: event,
+                                naturalWidth: img.naturalWidth,
+                                naturalHeight: img.naturalHeight
+                            });
+                            reject(error);
+                        };
+                        
+                        // Add timeout to prevent hanging on slow loads
+                        setTimeout(() => {
+                            if (!img.complete) {
+                                const error = new Error(`Image loading timeout: ${photoUrl}`);
+                                error.photoUrl = photoUrl;
+                                error.timeout = true;
+                                console.error('Image loading timeout:', photoUrl);
+                                reject(error);
+                            }
+                        }, 10000); // 10 second timeout
                     });
 
                     // Update container with the loaded image
@@ -131,8 +170,14 @@
                     // Add loaded class for fade-in effect
                     setTimeout(() => img.classList.add('loaded'), 50);
                 } catch (error) {
-                    console.error('Error displaying photo:', error);
-                    throw error; // Propagate error to be handled by startSlider
+                    if (error.photoUrl) {
+                        console.error('Error displaying photo:', error.message, 'URL:', error.photoUrl);
+                        // For image loading errors, try to continue with next photo instead of showing error screen
+                        throw new Error(`Image loading failed: ${error.photoUrl}`);
+                    } else {
+                        console.error('Error displaying photo:', error);
+                        throw error; // Propagate other errors to be handled by startSlider
+                    }
                 }
             }
 
@@ -156,4 +201,4 @@
         });
     </script>
 </body>
-</html>
+</html> 

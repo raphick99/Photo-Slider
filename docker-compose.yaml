@@ -13,7 +13,7 @@ services:
     environment:
       - AWS_REGION=eu-north-1
       - AWS_DEFAULT_REGION=eu-north-1
-      - BUCKET_NAME=ickovics-home
+      - BUCKET_NAME=photo-slider-storage
       - FETCH_INTERVAL=60
       - DISPLAY_TIME=10
     ports:
