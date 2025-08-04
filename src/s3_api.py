@@ -6,15 +6,15 @@ import config
 
 
 class S3Api:
-    def __init__(self, bucket_name: str, prefix: str = ''):
+    def __init__(self, bucket_name: str, tenant_id: str):
         self.bucket_name = bucket_name
-        self.prefix = prefix.rstrip('/') + '/' if prefix else ''
+        self.tenant_id = tenant_id
 
     async def list_files(self) -> AsyncGenerator[str, None]:
         session = aioboto3.Session()
         async with session.resource('s3') as s3:
             bucket = await s3.Bucket(self.bucket_name)
-            async for s3_object in bucket.objects.filter(Prefix=self.prefix):
+            async for s3_object in bucket.objects.filter(Prefix=self.tenant_id):
                 yield s3_object.key
 
     async def get_presigned_url(self, key: str, expires_in: int = 60) -> str:

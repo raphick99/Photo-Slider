@@ -47,7 +47,7 @@ async def get_next_photo_endpoint(tenant_id: Annotated[str, Header(alias='X-TENA
     if not photo_url:
         logger.warning('No photos available for tenant', tenant_id=tenant_id)
         raise HTTPException(status_code=404, detail='No photos available')
-    logger.info('Returning photo URL to client', tenant_id=tenant_id, url_domain=photo_url.split('?')[0].split('/')[-3:] if '?' in photo_url else 'unknown')
+    logger.info('Returning photo URL to client', tenant_id=tenant_id)
     return PhotoResponse(photo_url=photo_url)
 
 
