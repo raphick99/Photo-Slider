@@ -7,13 +7,14 @@ from s3_api import S3Api
 
 
 class PhotoScheduler:
-    def __init__(self, bucket_name: str, fetch_interval: float):
-        self.s3_api = S3Api(bucket_name)
+    def __init__(self, bucket_name: str, fetch_interval: float, tenant_id: str):
+        self.s3_api = S3Api(bucket_name, tenant_id)
         self.fetch_interval = fetch_interval
         self.photo_queue = queue.PriorityQueue()
         self.photos_in_queue = set()
         self.current_age = 1
         self.last_fetch_time = 0
+        self.tenant_id = tenant_id
 
     async def _fetch_new_photos(self):
         logger.info('Fetching new photos')
