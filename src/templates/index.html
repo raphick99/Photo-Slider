@@ -73,112 +73,182 @@
                 this.container = document.getElementById('photo-container');
                 this.displayTime = 10000; // Default display time in ms
                 this.retryDelay = 5000; // Delay before retrying when no photos are available
-                this.tenantId = window.TENANT_ID; // Get tenant ID from template variable
+                this.tenantId = window.TENANT_ID;
+
+                // Timer management
+                this.timer = null;
+
+                // Photo preloading system
+                this.currentPhoto = null;
+                this.nextPhoto = null;
+                this.isPreloading = false;
+
+                // State
+                this.isRunning = false;
             }
 
             async initialize() {
                 try {
-                    // Fetch configuration
-                    const configResponse = await fetch('/configuration', {
-                        headers: {
-                            'X-TENANT-ID': this.tenantId
-                        }
-                    });
-                    this.config = await configResponse.json();
-                    this.displayTime = this.config.display_time * 1000; // Convert to milliseconds
-                    
-                    // Start the slider
-                    await this.startSlider();
+                    await this.loadConfiguration();
+                    this.setupEventListeners();
+                    await this.start();
                 } catch (error) {
                     console.error('Error initializing slider:', error);
                     this.showError('Error loading configuration');
                 }
             }
 
-            async startSlider() {
-                while (true) {
-                    try {
-                        await this.displayNextPhoto();
-                        await this.sleep(this.displayTime);
-                    } catch (error) {
-                        if (error instanceof Response && error.status === 404) {
-                            this.showNoPhotos();
-                            await this.sleep(this.retryDelay);
-                        } else {
-                            console.error('Error in slider loop:', error);
-                            this.showError('Error loading photos');
-                            await this.sleep(this.retryDelay);
-                        }
-                    }
+            async loadConfiguration() {
+                const response = await fetch('/configuration', {
+                    headers: { 'X-TENANT-ID': this.tenantId }
+                });
+                this.config = await response.json();
+                this.displayTime = this.config.display_time * 1000;
+            }
+
+            setupEventListeners() {
+                document.addEventListener('dblclick', (event) => {
+                    event.preventDefault();
+                    this.advance();
+                });
+            }
+
+            async start() {
+                if (this.isRunning) return;
+                this.isRunning = true;
+
+                try {
+                    // Load and display first photo
+                    await this.loadAndDisplayNext();
+                    // Start preloading the next photo and begin timer
+                    this.scheduleNext();
+                } catch (error) {
+                    this.handleError(error);
                 }
             }
 
-            async displayNextPhoto() {
-                try {
-                    const response = await fetch('/photos/next', {
-                        headers: {
-                            'X-TENANT-ID': this.tenantId
-                        }
-                    });
-                    if (!response.ok) {
-                        throw response;
-                    }
-                    const photoResponse = await response.json();
-                    const photoUrl = photoResponse.photo_url;
-                    
-                    console.log('Loading photo:', photoUrl);
-                    
-                    // Create and load the image
-                    const img = document.createElement('img');
-                    img.src = photoUrl;
-                    
-                    // Wait for image to load
-                    await new Promise((resolve, reject) => {
-                        img.onload = () => {
-                            console.log('Photo loaded successfully:', photoUrl);
-                            resolve();
-                        };
-                        img.onerror = (event) => {
-                            const error = new Error(`Failed to load image: ${photoUrl}`);
-                            error.photoUrl = photoUrl;
-                            error.originalEvent = event;
-                            console.error('Image loading failed:', {
-                                url: photoUrl,
-                                error: event,
-                                naturalWidth: img.naturalWidth,
-                                naturalHeight: img.naturalHeight
-                            });
-                            reject(error);
-                        };
-                        
-                        // Add timeout to prevent hanging on slow loads
-                        setTimeout(() => {
-                            if (!img.complete) {
-                                const error = new Error(`Image loading timeout: ${photoUrl}`);
-                                error.photoUrl = photoUrl;
-                                error.timeout = true;
-                                console.error('Image loading timeout:', photoUrl);
-                                reject(error);
-                            }
-                        }, 10000); // 10 second timeout
-                    });
+            stop() {
+                this.isRunning = false;
+                this.clearTimer();
+            }
 
-                    // Update container with the loaded image
-                    this.container.innerHTML = '';
-                    this.container.appendChild(img);
-                    
-                    // Add loaded class for fade-in effect
-                    setTimeout(() => img.classList.add('loaded'), 50);
-                } catch (error) {
-                    if (error.photoUrl) {
-                        console.error('Error displaying photo:', error.message, 'URL:', error.photoUrl);
-                        // For image loading errors, try to continue with next photo instead of showing error screen
-                        throw new Error(`Image loading failed: ${error.photoUrl}`);
-                    } else {
-                        console.error('Error displaying photo:', error);
-                        throw error; // Propagate other errors to be handled by startSlider
-                    }
+            advance() {
+                if (!this.isRunning) return;
+
+                this.clearTimer();
+                this.loadAndDisplayNext()
+                    .then(() => this.scheduleNext())
+                    .catch(error => this.handleError(error));
+            }
+
+            scheduleNext() {
+                this.clearTimer();
+                if (!this.isRunning) return;
+
+                // Start preloading the next photo immediately
+                this.preloadNext();
+
+                // Schedule the next advance
+                this.timer = setTimeout(() => {
+                    this.advance();
+                }, this.displayTime);
+            }
+
+            clearTimer() {
+                if (this.timer) {
+                    clearTimeout(this.timer);
+                    this.timer = null;
                 }
+            }
+
+            async loadAndDisplayNext() {
+                // If we have a preloaded photo, use it instantly
+                if (this.nextPhoto && this.nextPhoto.complete) {
+                    console.log('Using preloaded photo:', this.nextPhoto.src);
+                    this.displayPhoto(this.nextPhoto);
+                    this.currentPhoto = this.nextPhoto;
+                    this.nextPhoto = null;
+                    return;
+                }
+
+                // Otherwise, load a new photo
+                const photoUrl = await this.fetchNextPhotoUrl();
+                const img = await this.loadImage(photoUrl);
+                this.displayPhoto(img);
+                this.currentPhoto = img;
+            }
+
+            async preloadNext() {
+                if (this.isPreloading || this.nextPhoto) return;
+
+                this.isPreloading = true;
+                try {
+                    const photoUrl = await this.fetchNextPhotoUrl();
+                    this.nextPhoto = await this.loadImage(photoUrl);
+                    console.log('Preloaded next photo:', photoUrl);
+                } catch (error) {
+                    console.log('Failed to preload next photo:', error.message);
+                    this.nextPhoto = null;
+                } finally {
+                    this.isPreloading = false;
+                }
+            }
+
+            async fetchNextPhotoUrl() {
+                const response = await fetch('/photos/next', {
+                    headers: { 'X-TENANT-ID': this.tenantId }
+                });
+                if (!response.ok) throw response;
+
+                const data = await response.json();
+                return data.photo_url;
+            }
+
+            async loadImage(url) {
+                return new Promise((resolve, reject) => {
+                    const img = document.createElement('img');
+
+                    const timeout = setTimeout(() => {
+                        reject(new Error(`Image loading timeout: ${url}`));
+                    }, 10000);
+
+                    img.onload = () => {
+                        clearTimeout(timeout);
+                        console.log('Photo loaded successfully:', url);
+                        resolve(img);
+                    };
+
+                    img.onerror = () => {
+                        clearTimeout(timeout);
+                        reject(new Error(`Failed to load image: ${url}`));
+                    };
+
+                    img.src = url;
+                });
+            }
+
+            displayPhoto(img) {
+                this.container.innerHTML = '';
+                this.container.appendChild(img);
+                // Trigger fade-in effect
+                setTimeout(() => img.classList.add('loaded'), 50);
+            }
+
+            handleError(error) {
+                console.error('Slider error:', error);
+
+                if (error instanceof Response && error.status === 404) {
+                    this.showNoPhotos();
+                } else {
+                    this.showError('Error loading photos');
+                }
+
+                // Retry after delay
+                this.timer = setTimeout(() => {
+                    if (this.isRunning) {
+                        this.advance();
+                    }
+                }, this.retryDelay);
             }
 
             showError(message) {
@@ -187,10 +257,6 @@
 
             showNoPhotos() {
                 this.container.innerHTML = `<div class="no-photos">No photos available. Retrying in ${this.retryDelay/1000} seconds...</div>`;
-            }
-
-            sleep(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
             }
         }
 
