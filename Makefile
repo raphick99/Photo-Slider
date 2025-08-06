@@ -12,7 +12,7 @@ lint:
 	pdm run ruff format
 	pdm run ruff check --fix
 
-push:
+push: certs
 	# Create remote directory
 	$(SSH_COMMAND) "mkdir -p $(REMOTE_DIR)"
 	# Copy necessary files excluding hidden files
@@ -29,4 +29,8 @@ down:
 certs:
 	./generate-certs.sh
 
-run: down certs push up
+run: down push up
+
+clean:
+	$(SSH_COMMAND) "cd $(REMOTE_DIR) && rm -rf *"
+	rm -rf certs
