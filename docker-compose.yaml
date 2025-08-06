@@ -29,7 +29,8 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certs:/etc/nginx/certs:ro
+      - /etc/letsencrypt/live/loopslide.xyz/fullchain.pem:/etc/nginx/ssl/cert.pem:ro
+      - /etc/letsencrypt/live/loopslide.xyz/privkey.pem:/etc/nginx/ssl/key.pem:ro
     depends_on:
       - app
       - filebrowser
