@@ -12,11 +12,11 @@ lint:
 	pdm run ruff format
 	pdm run ruff check --fix
 
-push:
+push: certs
 	# Create remote directory
 	$(SSH_COMMAND) "mkdir -p $(REMOTE_DIR)"
 	# Copy necessary files excluding hidden files
-	rsync -av --exclude='.*' -e "ssh -i $(PEM_FILE)" Dockerfile nginx.conf docker-compose.yaml pyproject.toml pdm.lock src filebrowser $(USER)@$(HOST):$(REMOTE_DIR)
+	rsync -av --exclude='.*' -e "ssh -i $(PEM_FILE)" Dockerfile nginx.conf docker-compose.yaml pyproject.toml pdm.lock src certs $(USER)@$(HOST):$(REMOTE_DIR)
 	# Build on remote machine
 	$(SSH_COMMAND) "cd $(REMOTE_DIR) && docker build -t $(IMAGE_NAME) ."
 
@@ -25,3 +25,12 @@ up:
 
 down:
 	$(SSH_COMMAND) "cd $(REMOTE_DIR) && docker-compose down"
+
+certs:
+	./generate-certs.sh
+
+run: down push up
+
+clean:
+	$(SSH_COMMAND) "cd $(REMOTE_DIR) && rm -rf *"
+	rm -rf certs
